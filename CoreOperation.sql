@@ -38,7 +38,7 @@ CREATE OR REPLACE FUNCTION ORDER_DRINK (integer, integer[][]) RETURNS integer AS
 	BEGIN
 		--Create a new order
 		INSERT INTO ORDERS VALUES
-			(DEFAULT, CURRENT_DATE, $1) returning id INTO order_id;
+			(DEFAULT, localtimestamp, $1) returning id INTO order_id;
 
 		--Create a new ordered drink for each drink
 		FOREACH x SLICE 1 IN ARRAY $2
@@ -52,6 +52,32 @@ CREATE OR REPLACE FUNCTION ORDER_DRINK (integer, integer[][]) RETURNS integer AS
 	END;
 $$ LANGUAGE plpgsql;
 
+/*
+ * Function TotalAmount
+ * DESC: utils function to get the total amount that a client needs to pay
+ * IN: a client token
+ * OUT: the total amount of all the drink of the table
+ * PRE: the client token is valid and corresponds to an occupied table
+ * POST: total amount correspond to all (and only) ordered drinks at that table
+ */
+ CREATE OR REPLACE FUNCTION TOTAL_AMOUNT (integer) RETURNS float AS $$
+	DECLARE 
+		total float;
+ 	BEGIN
+		--Check that client exist
+		IF (SELECT id FROM CLIENT WHERE id=$1) IS NULL THEN
+			RAISE EXCEPTION 'the given client does not exists';
+		END IF;
+		
+		--Get total amount
+ 		SELECT sum(price*T1.quantity) INTO total FROM 
+			(SELECT SUM(qty) AS "quantity",drink FROM ORDERED_DRINK,ORDERS WHERE ORDERS.id=ORDERED_DRINK.orders AND ORDERS.client=$1 GROUP BY drink) AS T1, DRINK
+			WHERE DRINK.id = T1.drink;
+
+		--Return total amount
+		RETURN COALESCE(total, 0.0);
+ 	END;
+ $$ LANGUAGE plpgsql;
 
 /*
  * Function IssueTicket
@@ -61,13 +87,40 @@ $$ LANGUAGE plpgsql;
  * PRE: the client token is valid and corresponds to an occupied table
  * POST: issued ticket corresponds to all (and only) ordered drinks at that table
  */
- CREATE OR REPLACE FUNCTION ISSUE_TICKET (c integer) RETURNS TABLE(name text, quantity bigint, price float, total float) AS $$
+ CREATE OR REPLACE FUNCTION ISSUE_TICKET (integer) RETURNS TABLE(name text, quantity bigint, price float, total float) AS $$
  	BEGIN
+		--Check that client exist
+		IF (SELECT id FROM CLIENT WHERE id=$1) IS NULL THEN
+			RAISE EXCEPTION 'the given client does not exists';
+		END IF;
+		
+		--Return the ticket
  		RETURN QUERY
  		SELECT DRINK.name,sum AS "quantity" ,DRINK.price AS "unit price",DRINK.price*sum AS "total price" FROM 
-			(SELECT SUM(qty),drink FROM ORDERED_DRINK,ORDERS WHERE ORDERS.id=ORDERED_DRINK.orders AND ORDERS.client=c GROUP BY drink) AS T1, DRINK
+			(SELECT SUM(qty),drink FROM ORDERED_DRINK,ORDERS WHERE ORDERS.id=ORDERED_DRINK.orders AND ORDERS.client=$1 GROUP BY drink) AS T1, DRINK
 			WHERE DRINK.id = T1.drink;
  	END;
  $$ LANGUAGE plpgsql;
+
+ 
+/*
+ * Function PayTable
+ * DESC: invoked by the smartphone on confirmation from the payment gateway .
+ * (we ignore security on purpose here; a real app would never expose such an API, of course).
+ * IN: a client token
+ * IN: an amount paid
+ * OUT:
+ * PRE: the client token is valid and corresponds to an occupied table
+ * PRE: the input amount is greater or equal to the amount due for that table
+ * POST: the table is released
+ * POST: the client token can no longer be used for ordering
+ */
+CREATE OR REPLACE FUNCTION PAY_TABLE(integer,float) RETURNS void AS $$
+	BEGIN
+		-- Insert new payment
+		INSERT INTO PAYMENT (amount, client) VALUES
+			($2, $1);
+	END;
+$$ LANGUAGE plpgsql;
 
  

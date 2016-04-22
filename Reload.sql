@@ -1,4 +1,4 @@
-/***************
+﻿/***************
  * DROP TABLES *
  ***************/
 
@@ -32,7 +32,7 @@ CREATE TABLE DRINK(
 /* Represent the order */
 CREATE TABLE ORDERS(
 	id SERIAL PRIMARY KEY,
-	time DATE NOT NULL,
+	time TIMESTAMP NOT NULL,
 	client INT NOT NULL REFERENCES CLIENT(id)
 );
 /* Represent the ordered drink */

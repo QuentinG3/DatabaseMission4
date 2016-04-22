@@ -28,6 +28,26 @@ CREATE TRIGGER check_client_creation
 	EXECUTE PROCEDURE check_client_creation();
 
 /*
+ * Check that the client id of the new orders exist
+ */
+CREATE OR REPLACE FUNCTION check_orders_creation() RETURNS trigger AS $check_orders_creation$
+	BEGIN
+		--Check that client exist
+		IF (SELECT id FROM CLIENT WHERE id=NEW.client) IS NULL THEN
+			RAISE EXCEPTION 'the given client does not exists';
+		END IF;
+
+		RETURN NEW;
+	END;
+$check_orders_creation$ LANGUAGE plpgsql;
+
+-- Orders creation trigger
+CREATE TRIGGER check_orders_creation
+	BEFORE INSERT ON orders
+	FOR EACH ROW
+	EXECUTE PROCEDURE check_orders_creation();
+
+/*
  * Check that the drink of the new ordered_drink exist
  */
 CREATE OR REPLACE FUNCTION check_ordered_drink_creation() RETURNS trigger AS $check_ordered_drink_creation$
@@ -57,3 +77,34 @@ CREATE TRIGGER check_ordered_drink_creation
 	BEFORE INSERT ON ordered_drink
 	FOR EACH ROW
 	EXECUTE PROCEDURE check_ordered_drink_creation();
+
+/*
+ * Check that the client exist
+ * Delete the client that paid from the table client
+ */
+CREATE OR REPLACE FUNCTION delete_client_on_insert_payment() RETURNS trigger AS $delete_client_on_insert_payment$
+	BEGIN
+		--Check that the client exist
+		IF (SELECT id FROM CLIENT WHERE id=NEW.client) IS NULL THEN
+			RAISE EXCEPTION 'the given client does not exists';
+		END IF;
+
+		--Check that amount paid is greater or equal than amount due
+		IF NEW.amount < (SELECT TOTAL_AMOUNT(NEW.client)) THEN
+			RAISE EXCEPTION 'the amount paid is less than the amout due';
+		END IF;
+
+		--Delete the client
+		DELETE FROM CLIENT WHERE id=NEW.client;
+
+		RETURN NEW;
+		
+	END;
+$delete_client_on_insert_payment$ LANGUAGE plpgsql;
+
+-- Paymenet creation trigger
+CREATE TRIGGER delete_client_on_insert_payment
+	BEFORE INSERT ON payment
+	FOR EACH ROW
+	EXECUTE PROCEDURE delete_client_on_insert_payment();
+
