@@ -9,7 +9,7 @@ CREATE TABLE EMPLACEMENT(
 /* Represent the client */
 CREATE TABLE CLIENT(
 	id SERIAL PRIMARY KEY,
-	emplacement INT NOT NULL UNIQUE REFERENCES EMPLACEMENT(id)
+	emplacement INT UNIQUE REFERENCES EMPLACEMENT(id)
 );
 /* Represent the drink */
 CREATE TABLE DRINK(
@@ -122,7 +122,7 @@ CREATE TRIGGER check_ordered_drink_creation
  * Check that the client exist
  * Delete the client that paid from the table client
  */
-CREATE OR REPLACE FUNCTION delete_client_on_insert_payment() RETURNS trigger AS $delete_client_on_insert_payment$
+CREATE OR REPLACE FUNCTION free_table_on_insert_payment() RETURNS trigger AS $free_table_on_insert_payment$
 	BEGIN
 		--Check that the client exist
 		IF (SELECT id FROM CLIENT WHERE id=NEW.client) IS NULL THEN
@@ -134,19 +134,19 @@ CREATE OR REPLACE FUNCTION delete_client_on_insert_payment() RETURNS trigger AS 
 			RAISE EXCEPTION 'the amount paid is less than the amout due';
 		END IF;
 
-		--Delete the client
-		DELETE FROM CLIENT WHERE id=NEW.client;
+		--Free the table
+		UPDATE CLIENT SET emplacement=null WHERE id=NEW.client;
 
 		RETURN NEW;
 		
 	END;
-$delete_client_on_insert_payment$ LANGUAGE plpgsql;
+$free_table_on_insert_payment$ LANGUAGE plpgsql;
 
 -- Paymenet creation trigger
-CREATE TRIGGER delete_client_on_insert_payment
+CREATE TRIGGER free_table_on_insert_payment
 	BEFORE INSERT ON payment
 	FOR EACH ROW
-	EXECUTE PROCEDURE delete_client_on_insert_payment();
+	EXECUTE PROCEDURE free_table_on_insert_payment();
 
 /******************
  * CORE OPERATION *
