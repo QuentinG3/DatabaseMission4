@@ -34,5 +34,6 @@ if __name__ == '__main__':
         print("Paying the bill")
         db.PayTable(token,payedAmount)
         print("Bill paid with : {0}".format(payedAmount))
+
     except Exception as e:
         print(e)
