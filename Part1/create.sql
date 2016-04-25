@@ -1,15 +1,19 @@
 /**************
  * DATA MODEL *
  **************/
- 
+
 /* Represent the table */
 CREATE TABLE EMPLACEMENT(
 	id SERIAL PRIMARY KEY
 );
 /* Represent the client */
 CREATE TABLE CLIENT(
-	id SERIAL PRIMARY KEY,
-	emplacement INT UNIQUE REFERENCES EMPLACEMENT(id)
+	id SERIAL PRIMARY KEY
+);
+/* Represent the relation client_table */
+CREATE TABLE CLIENT_EMPLACEMENT(
+  client INT NOT NULL UNIQUE REFERENCES CLIENT(id),
+  emplacement INT NOT NULL PRIMARY KEY REFERENCES EMPLACEMENT(id)
 );
 /* Represent the drink */
 CREATE TABLE DRINK(
@@ -22,7 +26,7 @@ CREATE TABLE DRINK(
 CREATE TABLE ORDERS(
 	id SERIAL PRIMARY KEY,
 	time TIMESTAMP NOT NULL,
-	client INT NOT NULL 
+	client INT NOT NULL
 );
 /* Represent the ordered drink */
 CREATE TABLE ORDERED_DRINK(
@@ -35,37 +39,12 @@ CREATE TABLE ORDERED_DRINK(
 CREATE TABLE PAYMENT(
 	id SERIAL PRIMARY KEY,
 	amount FLOAT NOT NULL,
-	client INT NOT NULL
+	client INT NOT NULL REFERENCES CLIENT(id)
 );
 
 /***********
  * TRIGGER *
  ***********/
-
-/*
- * Check that the emplacement of the new client exist and is free before creating the user
- */
-CREATE OR REPLACE FUNCTION check_client_creation() RETURNS trigger AS $check_client_creation$
-	BEGIN
-		--Check that emplacement exist
-		IF (SELECT id FROM EMPLACEMENT WHERE id=NEW.emplacement) IS NULL THEN
-			RAISE EXCEPTION 'the given emplacement does not exist';
-		END IF;
-
-		--Check that emplacement is free
-		IF (SELECT id FROM CLIENT WHERE emplacement=NEW.emplacement) IS NOT NULL THEN
-			RAISE EXCEPTION 'emplacement is already taken at the moment';
-		END IF;
-	
-		RETURN NEW;
-	END;
-$check_client_creation$ LANGUAGE plpgsql;
-
--- Client creation trigger
-CREATE TRIGGER check_client_creation
-	BEFORE INSERT ON client
-	FOR EACH ROW
-	EXECUTE PROCEDURE check_client_creation();
 
 /*
  * Check that the client id of the new orders exist
@@ -75,6 +54,11 @@ CREATE OR REPLACE FUNCTION check_orders_creation() RETURNS trigger AS $check_ord
 		--Check that client exist
 		IF (SELECT id FROM CLIENT WHERE id=NEW.client) IS NULL THEN
 			RAISE EXCEPTION 'the given client does not exists';
+		END IF;
+
+		--Check that the client is on a table
+		IF (SELECT client FROM CLIENT_EMPLACEMENT WHERE client=NEW.client) IS NULL THEN
+			RAISE EXCEPTION 'the given client is not on a table';
 		END IF;
 
 		RETURN NEW;
@@ -135,7 +119,7 @@ CREATE OR REPLACE FUNCTION free_table_on_insert_payment() RETURNS trigger AS $fr
 		END IF;
 
 		--Free the table
-		UPDATE CLIENT SET emplacement=null WHERE id=NEW.client;
+		DELETE FROM CLIENT_EMPLACEMENT WHERE client=NEW.client;
 
 		RETURN NEW;
 		
@@ -162,13 +146,29 @@ CREATE TRIGGER free_table_on_insert_payment
  * POST: issued token can be used for ordering drinks
  */
 CREATE OR REPLACE FUNCTION ACQUIRE_TABLE (integer) RETURNS integer AS $$
+	DECLARE
+		client_id integer;
 	BEGIN
+		-- Check that table exist
+		IF (SELECT id FROM EMPLACEMENT WHERE id=$1) IS NULL THEN
+			RAISE EXCEPTION 'The given table does not exists';
+		END IF;
+
+		-- Check if the table is free
+		IF (SELECT emplacement FROM CLIENT_EMPLACEMENT WHERE emplacement=$1) IS NOT NULL THEN
+			RAISE EXCEPTION 'The given table is not free';
+		END IF;
+
 		-- Create a new client
 		INSERT INTO CLIENT VALUES
-			(DEFAULT, $1);
+			(DEFAULT) RETURNING id INTO client_id;
+
+		-- Create a new relation client table
+		INSERT INTO CLIENT_EMPLACEMENT VALUES
+			(client_id,$1);
 		
 		-- Return his token
-		RETURN (SELECT id FROM CLIENT WHERE emplacement=$1);
+		RETURN client_id;
 	END;
 $$ LANGUAGE plpgsql;
 

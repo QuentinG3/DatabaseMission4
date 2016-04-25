@@ -12,7 +12,7 @@ cur = conn.cursor()
 #Get the first free table id
 cur.execute("SELECT MIN(EMPLACEMENT.id)"+
 			"FROM EMPLACEMENT WHERE EMPLACEMENT.id NOT IN "+
-			"(SELECT EMPLACEMENT.id FROM EMPLACEMENT,CLIENT WHERE CLIENT.emplacement=EMPLACEMENT.id);")
+			"(SELECT emplacement FROM CLIENT_EMPLACEMENT);")
 free_table = cur.fetchone()[0]
 
 #Check if there is such a free emplacement

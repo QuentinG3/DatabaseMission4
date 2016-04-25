@@ -3,31 +3,6 @@
  ***********/
 
 /*
- * Check that the emplacement of the new client exist and is free before creating the user
- */
-CREATE OR REPLACE FUNCTION check_client_creation() RETURNS trigger AS $check_client_creation$
-	BEGIN
-		--Check that emplacement exist
-		IF (SELECT id FROM EMPLACEMENT WHERE id=NEW.emplacement) IS NULL THEN
-			RAISE EXCEPTION 'the given emplacement does not exist';
-		END IF;
-
-		--Check that emplacement is free
-		IF (SELECT client FROM CLIENT_EMPLACEMENT WHERE emplacement=NEW.emplacement) IS NOT NULL THEN
-			RAISE EXCEPTION 'emplacement is already taken at the moment';
-		END IF;
-	
-		RETURN NEW;
-	END;
-$check_client_creation$ LANGUAGE plpgsql;
-
--- Client creation trigger
-CREATE TRIGGER check_client_creation
-	BEFORE INSERT ON client_emplacement
-	FOR EACH ROW
-	EXECUTE PROCEDURE check_client_creation();
-
-/*
  * Check that the client id of the new orders exist
  */
 CREATE OR REPLACE FUNCTION check_orders_creation() RETURNS trigger AS $check_orders_creation$
@@ -35,6 +10,11 @@ CREATE OR REPLACE FUNCTION check_orders_creation() RETURNS trigger AS $check_ord
 		--Check that client exist
 		IF (SELECT id FROM CLIENT WHERE id=NEW.client) IS NULL THEN
 			RAISE EXCEPTION 'the given client does not exists';
+		END IF;
+
+		--Check that the client is on a table
+		IF (SELECT client FROM CLIENT_EMPLACEMENT WHERE client=NEW.client) IS NULL THEN
+			RAISE EXCEPTION 'the given client is not on a table';
 		END IF;
 
 		RETURN NEW;
@@ -95,7 +75,7 @@ CREATE OR REPLACE FUNCTION free_table_on_insert_payment() RETURNS trigger AS $fr
 		END IF;
 
 		--Free the table
-		UPDATE CLIENT SET emplacement=null WHERE id=NEW.client;
+		DELETE FROM CLIENT_EMPLACEMENT WHERE client=NEW.client;
 
 		RETURN NEW;
 		

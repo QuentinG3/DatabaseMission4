@@ -25,7 +25,7 @@ CREATE OR REPLACE FUNCTION SCENARIO() RETURNS text AS $$
 		 * Step 1 : Acquire a table
 		 */
 		--Get the first free table id
-		SELECT MIN(EMPLACEMENT.id) INTO free_table FROM EMPLACEMENT WHERE EMPLACEMENT.id NOT IN (SELECT EMPLACEMENT.id FROM EMPLACEMENT,CLIENT WHERE CLIENT.emplacement=EMPLACEMENT.id);
+		SELECT MIN(EMPLACEMENT.id) INTO free_table FROM EMPLACEMENT WHERE EMPLACEMENT.id NOT IN (SELECT emplacement FROM CLIENT_EMPLACEMENT);
 
 		--Check if there is such a free emplacement
 		IF free_table IS NULL THEN
@@ -76,4 +76,5 @@ CREATE OR REPLACE FUNCTION SCENARIO() RETURNS text AS $$
 	END;
 $$ LANGUAGE plpgsql;
 
+--Launch scenario
 SELECT SCENARIO();

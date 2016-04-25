@@ -15,9 +15,23 @@ CREATE OR REPLACE FUNCTION ACQUIRE_TABLE (integer) RETURNS integer AS $$
 	DECLARE
 		client_id integer;
 	BEGIN
+		-- Check that table exist
+		IF (SELECT id FROM EMPLACEMENT WHERE id=$1) IS NULL THEN
+			RAISE EXCEPTION 'The given table does not exists';
+		END IF;
+
+		-- Check if the table is free
+		IF (SELECT emplacement FROM CLIENT_EMPLACEMENT WHERE emplacement=$1) IS NOT NULL THEN
+			RAISE EXCEPTION 'The given table is not free';
+		END IF;
+
 		-- Create a new client
 		INSERT INTO CLIENT VALUES
-			(DEFAULT) returning id INTO client_id;
+			(DEFAULT) RETURNING id INTO client_id;
+
+		-- Create a new relation client table
+		INSERT INTO CLIENT_EMPLACEMENT VALUES
+			(client_id,$1);
 		
 		-- Return his token
 		RETURN client_id;
