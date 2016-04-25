@@ -13,7 +13,7 @@ CREATE OR REPLACE FUNCTION check_client_creation() RETURNS trigger AS $check_cli
 		END IF;
 
 		--Check that emplacement is free
-		IF (SELECT id FROM CLIENT WHERE emplacement=NEW.emplacement) IS NOT NULL THEN
+		IF (SELECT client FROM CLIENT_EMPLACEMENT WHERE emplacement=NEW.emplacement) IS NOT NULL THEN
 			RAISE EXCEPTION 'emplacement is already taken at the moment';
 		END IF;
 	
@@ -23,7 +23,7 @@ $check_client_creation$ LANGUAGE plpgsql;
 
 -- Client creation trigger
 CREATE TRIGGER check_client_creation
-	BEFORE INSERT ON client
+	BEFORE INSERT ON client_emplacement
 	FOR EACH ROW
 	EXECUTE PROCEDURE check_client_creation();
 

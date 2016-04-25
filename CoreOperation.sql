@@ -12,13 +12,15 @@
  * POST: issued token can be used for ordering drinks
  */
 CREATE OR REPLACE FUNCTION ACQUIRE_TABLE (integer) RETURNS integer AS $$
+	DECLARE
+		client_id integer;
 	BEGIN
 		-- Create a new client
 		INSERT INTO CLIENT VALUES
-			(DEFAULT, $1);
+			(DEFAULT) returning id INTO client_id;
 		
 		-- Return his token
-		RETURN (SELECT id FROM CLIENT WHERE emplacement=$1);
+		RETURN client_id;
 	END;
 $$ LANGUAGE plpgsql;
 
