@@ -1,4 +1,4 @@
-/***************
+﻿/***************
  * DROP TABLES *
  ***************/
 
@@ -6,8 +6,10 @@ DROP TABLE PAYMENT;
 DROP TABLE ORDERED_DRINK;
 DROP TABLE ORDERS;
 DROP TABLE DRINK;
+DROP TABLE CLIENT_EMPLACEMENT;
 DROP TABLE CLIENT;
 DROP TABLE EMPLACEMENT;
+
 
 /**************
  * DATA MODEL *
@@ -19,8 +21,12 @@ CREATE TABLE EMPLACEMENT(
 );
 /* Represent the client */
 CREATE TABLE CLIENT(
-	id SERIAL PRIMARY KEY,
-	emplacement INT NOT NULL UNIQUE REFERENCES EMPLACEMENT(id)
+	id SERIAL PRIMARY KEY
+);
+/* Represent the relation client_table */
+CREATE TABLE CLIENT_EMPLACEMENT(
+  client INT NOT NULL UNIQUE REFERENCES CLIENT(id),
+  emplacement INT NOT NULL PRIMARY KEY REFERENCES EMPLACEMENT(id)
 );
 /* Represent the drink */
 CREATE TABLE DRINK(
@@ -32,7 +38,7 @@ CREATE TABLE DRINK(
 /* Represent the order */
 CREATE TABLE ORDERS(
 	id SERIAL PRIMARY KEY,
-	time DATE NOT NULL,
+	time TIMESTAMP NOT NULL,
 	client INT NOT NULL REFERENCES CLIENT(id)
 );
 /* Represent the ordered drink */

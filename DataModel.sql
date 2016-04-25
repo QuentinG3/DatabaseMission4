@@ -1,15 +1,19 @@
 ﻿/**************
  * DATA MODEL *
  **************/
- 
+
 /* Represent the table */
 CREATE TABLE EMPLACEMENT(
 	id SERIAL PRIMARY KEY
 );
 /* Represent the client */
 CREATE TABLE CLIENT(
-	id SERIAL PRIMARY KEY,
-	emplacement INT NOT NULL UNIQUE REFERENCES EMPLACEMENT(id)
+	id SERIAL PRIMARY KEY
+);
+/* Represent the relation client_table */
+CREATE TABLE CLIENT_EMPLACEMENT(
+  client INT NOT NULL UNIQUE REFERENCES CLIENT(id),
+  emplacement INT NOT NULL PRIMARY KEY REFERENCES EMPLACEMENT(id)
 );
 /* Represent the drink */
 CREATE TABLE DRINK(
@@ -21,8 +25,8 @@ CREATE TABLE DRINK(
 /* Represent the order */
 CREATE TABLE ORDERS(
 	id SERIAL PRIMARY KEY,
-	time DATE NOT NULL,
-	client INT NOT NULL REFERENCES CLIENT(id)
+	time TIMESTAMP NOT NULL,
+	client INT NOT NULL
 );
 /* Represent the ordered drink */
 CREATE TABLE ORDERED_DRINK(
@@ -37,4 +41,3 @@ CREATE TABLE PAYMENT(
 	amount FLOAT NOT NULL,
 	client INT NOT NULL REFERENCES CLIENT(id)
 );
-
