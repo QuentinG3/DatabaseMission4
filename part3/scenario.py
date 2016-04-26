@@ -1,10 +1,10 @@
 from QueryBuilder import *
 
 if __name__ == '__main__':
-    db = DatabaseInterface("automatedcafe","quentin","localhost","azerty")
+    db = DatabaseInterface("AutomatedCafe","postgres","localhost","azerty")
     db.connect()
 
-    ScannedTable = 64
+    ScannedTable = 1
 
     try:
         #Acquiring the table with the scanned barcode
