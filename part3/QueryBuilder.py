@@ -153,7 +153,7 @@ class DatabaseInterface:
         orderId = orderInsertion.inserted_primary_key[0]
 
         #For each drink in the list we try to order
-        for drinkName,quantity in orderList:
+        for drinkId,quantity in orderList:
 
             #We can't order a negative number of drinks
             if quantity < 1:
@@ -161,8 +161,7 @@ class DatabaseInterface:
             else:
 
                 #Check if the drinkId is valid
-                drinkId = self.drinkIsValid(drinkName)
-                if drinkId is not None:
+                if self.drinkIsValid(drinkId):
 
                     #Add the drink to the order
                     drinkInsertion = self.connection.execute(
@@ -175,7 +174,7 @@ class DatabaseInterface:
                         )
                     )
                 else:
-                    print("The drink {0} does not exist".format(drinkName))
+                    print("The drink {0} does not exist".format(drinkId))
 
         return orderId
 
@@ -252,18 +251,19 @@ class DatabaseInterface:
 
 
 
-    def drinkIsValid(self,drinkName):
-        
+    def drinkIsValid(self,drinkId):
+
+
         validDrink = self.connection.execute(
             self.dbs[DRINK_TABLE].select().
-            where(self.dbs[DRINK_TABLE].c[NAME_FIELD_DRINK] == drinkName)
+            where(self.dbs[DRINK_TABLE].c[ID_FIELD_DRINK] == drinkId)
         ).first()
 
-        #if no drink was found it does not exist, else we return the drink id
+        #if no drink was found we return fasle else true
         if validDrink is None:
-            return None
+            return False
         else:
-            return validDrink[0]
+            return True
 
     def tokenIsValid(self,token):
 
@@ -292,6 +292,30 @@ class DatabaseInterface:
             return False
         else:
             return True
+
+    def getDrinkByName(self,drinkName):
+
+        #Getting the drink by name
+        drinkByName = self.connection.execute(
+            self.dbs[DRINK_TABLE].select().
+            where(self.dbs[DRINK_TABLE].c[NAME_FIELD_DRINK] == drinkName)
+        ).first()
+
+        if drinkByName is None:
+            return None
+        else:
+            return drinkByName[0]
+
+    def getFirstFreeTable(self):
+
+        #Raw query to ease the process of creating the senario
+        freeTableQuery = self.connection.execute("SELECT (EMPLACEMENT.id) FROM EMPLACEMENT WHERE EMPLACEMENT.id NOT IN (SELECT emplacement FROM CLIENT_EMPLACEMENT)")
+        freeTable = freeTableQuery.first()
+
+        if freeTable is None:
+            return None
+        else:
+            return freeTable[0]
 
     def initializeTables(self):
 
